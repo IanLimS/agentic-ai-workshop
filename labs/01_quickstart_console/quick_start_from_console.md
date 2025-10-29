@@ -52,7 +52,7 @@
 2. 업로드 후 문서 파싱/분할/저장이 자동 진행됩니다.
 3. **Document 탭**에서 문서의 **문자 수/업데이트 시각/상태**를 확인하고, 
    만료 시간 설정/다운로드/삭제/**검색 범위 설정**도 수행할 수 있습니다.
-![Knowedge Management](/assets/01_quick_start/004_knowledge_management.png)
+![Knowedge Management](/assets/01_quick_start/004_knowledge_management_button.png)
 
 ![Import Files](/assets/01_quick_start/005_import_files.png)
 
@@ -63,22 +63,22 @@
 2. **File**/**Q&A** 스위치를 **On**
 3. **지식 기반 외 질문 처리**가 엄격해야 한다면, 
    - *“지식 소스에 벗어난 질문은 (사전 지정한) 안내문으로만 응답”* 모드로 전환
-    ![Change Model](/assets/01_quick_start/006_change_model.png)
-    ![Set Reasoning](/assets/01_quick_start/007_set_reasoning.png)
+    ![Change Model](/assets/01_quick_start/008_change_model.png)
+    ![Set Reasoning](/assets/01_quick_start/009_set_reasoning.png)
 
 ---
 
 ## 4) 대화 테스트 & 출처 확인 (Debug & References)
-1. **Dialogue Test(디버그 창)**에서 질문 입력
+1. **Dialogue Test(디버그 창)** 에서 질문 입력
 2. 답변의 **Reference source(출처)** 버튼을 클릭해 인용 문서/페이지를 확인
-   - 업로드한 PDF/CSV/XLSX/QnA가 연결되어 있어야 함
+   - 업로드한 PDF/csv/xlsx/Q&A 연결되어 있어야 함
    ![Verify References](/assets/01_quick_start/010_verify_app.png)
 
 ---
 
 ## 5) 게시 & 릴리스 관리 (Publish & Release Management)
 1. 테스트가 충분하다면 **Publish** 클릭 → 현재 테스트 환경의 앱을 **프로덕션 환경**으로 배포
-2. **Release Management → API Call Information**에서 아래를 확인
+2. **Release Management → API Call Information** 에서 아래를 확인
    - **경험(체험) 링크**, 공유용 URL/QR
    - **API Key** 표시(권한에 따라 표시) 및 **API 호출 가이드** 링크
      ![Release Management](/assets/01_quick_start/011_release_app.png)
@@ -95,7 +95,7 @@
 
 ## 🧪 (부록) 간단 API 호출
 > 콘솔 중심 워크샵이므로 선택 사항입니다. Release Management에서 API Key 발급을 확인한 뒤 실행하세요.
-    ![API Key](/assets/01_quick_start/012_api_key.png)
+    ![API Key](/assets/01_quick_start/012_manage_apikey.png)
 
 ```bash
 # .env에 다음이 있다고 가정

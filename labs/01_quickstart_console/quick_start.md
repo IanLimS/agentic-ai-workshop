@@ -15,17 +15,17 @@
 ---
 
 ## 1) 준비물
-- ADP 활성화 & 모델 쿼터 (예: `deepseek-r1`)
+- ADP 활성화 & API Key & 모델 쿼터 (예: `deepseek-r1`)
 - 로컬 도구: `curl`, **Python 3.10+** 또는 **Node 18+**
-- 레포 루트에 `.env` 생성:
-  ```ini
+- `/setup/` 아래에 `.env` 생성
+  ```
   ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
   ADP_API_KEY=YOUR_ADP_API_KEY
   ADP_MODEL=deepseek-r1
   # (옵션) 임베딩 전용 모델을 분리하고 싶다면
   # ADP_EMBEDDINGS_MODEL=text-embedding-3-large
   ```
-- 셸에 적용:
+- `/setup/`하위 폴더에서 아래 스크립트를 실행해서 shell 에 적용:
   ```bash
   # macOS/Linux
   export $(grep -v '^#' .env | xargs)
@@ -53,6 +53,8 @@ curl -s -X POST "$ADP_BASE_URL/chat/completions" \
       {"role":"user","content":"에이전틱 AI가 해결하는 문제를 3가지로 요약해줘."}
     ]
   }' | jq -r '.choices[0].message.content'
+
+
 ```
 **무엇을 확인하나요?**
 - 200 OK & 응답 JSON 
