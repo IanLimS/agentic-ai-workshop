@@ -1,0 +1,232 @@
+{
+  "name": "Ecommerce Customer Support (ADP + KB)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "support-webhook",
+        "options": {
+          "responseData": "auto",
+          "responseCode": 200
+        }
+      },
+      "id": "Webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.0,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "support-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "const q = $json.body?.question || $json.query?.q || $json.message || '';\nfunction classify(text){\n  const t = (text||'').toLowerCase();\n  if(t.includes('return')||t.includes('refund')||t.includes('exchange')) return 'return';\n  if(t.includes('order')||t.includes('status')||t.includes('tracking')) return 'order_status';\n  return 'faq';\n}\nreturn [{ question: q, intent: classify(q) }];"
+      },
+      "id": "ClassifyIntent",
+      "name": "Classify Intent",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2.0,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "POST",
+        "url": "={{$env.ADP_BASE_URL}}/chat/completions",
+        "jsonParameters": true,
+        "options": {},
+        "sendHeaders": true,
+        "headerParametersJson": "={{ { 'Authorization': 'Bearer ' + $env.ADP_API_KEY, 'Content-Type': 'application/json' } }}",
+        "bodyParametersJson": "{{ {\n  'model': $env.ADP_MODEL || 'deepseek-r1',\n  'messages': [\n    { 'role': 'system', 'content': 'Answer *only* using the provided company policy. Respond in JSON: {\"found\": boolean, \"answer\": string}.' },\n    { 'role': 'user', 'content': 'Use knowledge base to answer: {{$json[\"question\"]}}' }\n  ]\n} }}"
+      },
+      "id": "SearchKB",
+      "name": "Search KB (ADP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const txt = $json.choices?.[0]?.message?.content || '';\nlet obj; try { obj = JSON.parse(txt); } catch(e) { obj = {found:false, answer: txt}; }\nreturn [{ found: !!obj.found, answer: obj.answer || txt }];"
+      },
+      "id": "ParseKB",
+      "name": "Parse KB JSON",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2.0,
+      "position": [
+        1050,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json[\"found\"]}}"
+            }
+          ]
+        }
+      },
+      "id": "IfFound",
+      "name": "Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.0,
+      "position": [
+        1250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "POST",
+        "url": "={{$env.ADP_BASE_URL}}/chat/completions",
+        "jsonParameters": true,
+        "sendHeaders": true,
+        "headerParametersJson": "={{ { 'Authorization': 'Bearer ' + $env.ADP_API_KEY, 'Content-Type': 'application/json' } }}",
+        "bodyParametersJson": "{{ {\n  'model': $env.ADP_MODEL || 'deepseek-r1',\n  'messages': [\n    { 'role': 'system', 'content': 'You are a helpful support agent. Be concise.' },\n    { 'role': 'user', 'content': 'Customer asked: {{$json[\"question\"]}}' }\n  ]\n} }}"
+      },
+      "id": "LLMFallback",
+      "name": "LLM Fallback (ADP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1450,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const txt = $json.choices?.[0]?.message?.content || 'Sorry, I could not find an answer.';\nreturn [{ answer: txt }];"
+      },
+      "id": "ParseFallback",
+      "name": "Parse Fallback",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2.0,
+      "position": [
+        1650,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseMode": "lastNode"
+        },
+        "responseBody": "={{$json[\"answer\"] || 'OK'}}",
+        "responseCode": 200
+      },
+      "id": "Respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.0,
+      "position": [
+        1850,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Intent": {
+      "main": [
+        [
+          {
+            "node": "Search KB (ADP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search KB (ADP)": {
+      "main": [
+        [
+          {
+            "node": "Parse KB JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse KB JSON": {
+      "main": [
+        [
+          {
+            "node": "Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found?": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LLM Fallback (ADP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Fallback (ADP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Fallback": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "example"
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
