@@ -36,5 +36,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-
+.venv
+.frontmatter
+frontmatter.json
 .DS_Store
