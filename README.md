@@ -1,3 +1,146 @@
+
+## 워크샵 개요
+이 레포는 **ADP(TCADP)**를 이용해 **Agentic AI** 애플리케이션을 처음부터 출시/운영까지 만들어 보는 실습형 워크샵입니다. 콘솔에서 앱 생성 → 지식베이스 연결 → 워크플로(동기/비동기) 설계 → 외부 플러그인 연동 → OpenAI 호환 API 호출 → 릴리스 및 관측(토큰/지연/오류)까지 한 번에 다룹니다.
+
+## 학습 목표
+- ADP 애플리케이션 생성/설정 및 **Publish** 흐름 이해
+- **지식베이스(File + Q&A)** 구성과 **출처(Reference Source)** 검증
+- **싱글 워크플로**(LLM/툴/지식/조건/루프/비동기) 설계
+- **플러그인(MCP/OpenAPI)** 등록 및 워크플로에서 호출
+- **OpenAI 호환 API**(Python/Node)로 호출 및 스트리밍 처리
+- 릴리스/버전/사용량/지연/오류 등 **운영 지표** 확인
+
+## 일정(1일, 약 7.5시간)
+1) 킥오프 & 환경 점검(15m)  
+2) ADP 개요 & 아키텍처(45m)  
+3) 콘솔 Quick Start(60m) – 생성→설정→디버그→**Publish**  
+4) 지식베이스 딥다이브(75m) – 파일/Q&A, 하이브리드 검색, 레퍼런스  
+5) 워크플로(동기/비동기)(70m) – 캔버스 노드/분기/백그라운드 잡  
+6) 플러그인(MCP/OpenAPI)(45m) – 등록/권한/워크플로 호출  
+7) 권한 & 레퍼런스(35m) – RBAC, 외부 레퍼런스 링크  
+8) API(60m) – OpenAI 호환 호출/스트리밍/WS 다이얼로그  
+9) 릴리스 & 관측(30m) – 버전/메트릭/트러블슈팅
+
+> 2일형 옵션: 1–4 (Day1), 5–9 (Day2)
+
+## 준비사항
+- Tencent Cloud 계정 + **ADP 활성화** + 모델 쿼터(예: DeepSeek R1/V3 등)
+- 로컬: Python 3.10+ 또는 Node 18+, `curl`, (옵션) Postman
+- **API Key**는 `.env`에 보관(직접 하드코딩 금지)
+
+`.env` 템플릿 생성:
+```bash
+cp setup/.env.example .env
+# 키/엔드포인트 등 환경변수 입력
+```
+
+## 빠른 시작(콘솔)
+1) **Create Application** → 2) 모델/출력 설정 → 3) **Debug** 테스트 → 4) **Publish** 후 공유 링크 확보(키 비노출 주의)
+
+## 지식베이스
+- PDF/Doc/CSV 업로드 또는 **Q&A** 추가 → 하이브리드/시맨틱 검색, 매칭 임계치/청킹 조정 → Debug에서 **Reference Source** 확인
+
+## 워크플로(싱글 워크플로: 동기/비동기)
+- LLM/Tool/Knowledge/Condition/Loop 노드 구성 → 동기 경로로 기본 챗 UX → **비동기** 분기를 추가해 장기 작업 처리(상태 폴링)
+
+## 플러그인(MCP/OpenAPI)
+- Postman/Swagger 스펙(`setup/postman_collection.json`) 등록 → 최소권한 키 설정 → 워크플로 Tool 노드에서 호출 후 Debug로 응답 확인
+
+## 권한 & 외부 레퍼런스
+- 역할 기반 접근제어(RBAC) 구성 → 필요 시 **External Reference Links** 활성화
+
+## API – OpenAI 호환 호출
+`.env` 예시:
+```ini
+ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
+ADP_API_KEY=YOUR_ADP_API_KEY
+ADP_MODEL=deepseek-r1
+```
+Python/Node 샘플은 본문 예제를 그대로 사용하세요.
+
+## 릴리스 & 관측
+- Release 생성 → 요청/토큰/지연/에러 메트릭 확인 → Preview/Retry로 안전한 롤아웃
+
+## 트러블슈팅
+- 인용/레퍼런스 미출력: 매칭 임계치 하향/청킹 조정/재색인  
+- 비동기 지연: 노드 타임아웃/백그라운드 한도 점검  
+- 플러그인 실패: 인증/네트워크 이그레스/원본 오류 확인  
+- 429/쿼터: 동시성 축소, 스트리밍 활용, 대용량 문서는 사전 배치 처리
+
+## 스크린샷 캡처(요약)
+- **1280×720**, OS 100% 스케일, 좌측 내비 + 페이지 타이틀 포함, 비밀정보는 반드시 마스킹  
+- 파일명은 `assets/screenshots/01_...png` 형식으로 README와 동일하게 저장  
+- (옵션) Playwright 스크립트로 반자동 캡처 가능 – README 하단 예제 참고
+
+---
+
+# 🧠 고급 실습 (Advanced Labs)
+
+### 1) 데이터베이스를 임베딩해 지식베이스로 활용
+두 가지 경로가 있습니다.
+- **A. ADP가 내부 색인**: DB를 **CSV/Markdown**으로 덤프 → 콘솔 지식베이스에 업로드 → ADP가 인덱싱
+- **B. 사전 임베딩(이식성)**: 외부 임베딩 모델로 청킹→벡터화→FAISS/PGVector 저장 + 텍스트 스냅샷을 ADP KB에 업로드해 **출처 근거** 제공
+
+> ADP 테넌트에 `/embeddings` 엔드포인트가 없다면, **OpenAI 임베딩**을 사용하고, 대화/워크플로는 ADP를 그대로 사용해도 됩니다.
+
+- 샘플: `samples/python/db_to_embeddings.py`  
+  실행 전 환경변수 예시:
+  ```bash
+  # OpenAI 임베딩 예시
+  export OPENAI_API_KEY=sk-...
+  export OPENAI_EMBEDDINGS_MODEL=text-embedding-3-large
+  # 또는 ADP OpenAI 호환 임베딩
+  export ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
+  export ADP_API_KEY=xxx
+  export ADP_EMBEDDINGS_MODEL=<tenant-embedding-model>
+  python3 samples/python/db_to_embeddings.py
+  ```
+  완료 후 `artifacts/embeddings/products_snapshot.md`를 ADP KB에 업로드하고, **Reference Source**가 표시되는지 확인하세요.
+
+### 2) 멀티‑에이전트(OpenAI + Claude) + 심판(Arbiter)
+- OpenAI와 Claude가 각각 답변 → 심판(예: ADP의 DeepSeek R1)이 비교/통합한 **최종 응답** 생성  
+- ADP 워크플로 캔버스에서는 **두 LLM 노드 → Judge 노드 → Answer 노드**로 구성
+
+- 샘플: `samples/python/multi_agent_panel.py`  
+  환경변수 예시:
+  ```bash
+  export OPENAI_API_KEY=sk-...
+  export OPENAI_MODEL=gpt-4.1-mini
+  export ANTHROPIC_API_KEY=sk-ant-...
+  export ANTHROPIC_MODEL=claude-3.7-sonnet
+  export ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
+  export ADP_API_KEY=xxx
+  export ADP_MODEL=deepseek-r1
+  python3 samples/python/multi_agent_panel.py
+  ```
+
+### 3) 가드레일(Guardrails) 구성
+- **입력 가드**: PII/부적절 콘텐츠 필터(모더레이션 API + 정규식)  
+- **툴 호출 가드**: 목적지 호스트 **허용목록(allowlist)** 기반 이그레스 제어  
+- **출력 가드**: 정책 위반 키워드/패턴 최소 차단 + 경고 메시지 대체  
+- ADP 워크플로 팁: **Pre‑processor**(입력 검사)와 **Post‑processor**(출력 필터)를 추가하고, 위반 시 *Reject→Answer*로 분기
+
+- 샘플 파일:  
+  `samples/python/guardrails.py` (가드 함수),  
+  `samples/python/guardrails_demo.py` (데모 실행)
+
+```bash
+python3 samples/python/guardrails_demo.py
+```
+
+## 추가 아젠다(부록)
+- **DB 임베딩** – 45분: export → chunk → embed → KB 업로드
+- **멀티‑에이전트** – 60분: 패널 디베이트 → Judge 통합
+- **가드레일** – 45분: 입력/툴/출력 레이어 및 워크플로 배선
+
+**권장 실습 디렉터리 매핑**
+```
+08_db_embeddings/          # db_to_embeddings.py 실행 & KB 업로드
+09_multi_agent_panel/      # multi_agent_panel.py 실행 & 워크플로 반영
+10_guardrails/             # pre/post 프로세서 연결 & 차단/허용 시나리오 검증
+```
+---
+
 # Agentic AI Workshop with ADP (Tencent Cloud Agent Development Platform)
 
 Build an end‑to‑end **Agentic AI** application using **ADP (a.k.a. TCADP)**: create an application, add a knowledge base, design a workflow (sync/async), plug in external tools (MCP/OpenAPI), call it via an OpenAI‑compatible API, then release and observe usage.
@@ -495,146 +638,3 @@ if __name__ == '__main__':
 ```
 
 ---
-
-# 🇰🇷 한글 섹션 (Korean Section)
-
-## 워크샵 개요
-이 레포는 **ADP(TCADP)**를 이용해 **Agentic AI** 애플리케이션을 처음부터 출시/운영까지 만들어 보는 실습형 워크샵입니다. 콘솔에서 앱 생성 → 지식베이스 연결 → 워크플로(동기/비동기) 설계 → 외부 플러그인 연동 → OpenAI 호환 API 호출 → 릴리스 및 관측(토큰/지연/오류)까지 한 번에 다룹니다.
-
-## 학습 목표
-- ADP 애플리케이션 생성/설정 및 **Publish** 흐름 이해
-- **지식베이스(File + Q&A)** 구성과 **출처(Reference Source)** 검증
-- **싱글 워크플로**(LLM/툴/지식/조건/루프/비동기) 설계
-- **플러그인(MCP/OpenAPI)** 등록 및 워크플로에서 호출
-- **OpenAI 호환 API**(Python/Node)로 호출 및 스트리밍 처리
-- 릴리스/버전/사용량/지연/오류 등 **운영 지표** 확인
-
-## 일정(1일, 약 7.5시간)
-1) 킥오프 & 환경 점검(15m)  
-2) ADP 개요 & 아키텍처(45m)  
-3) 콘솔 Quick Start(60m) – 생성→설정→디버그→**Publish**  
-4) 지식베이스 딥다이브(75m) – 파일/Q&A, 하이브리드 검색, 레퍼런스  
-5) 워크플로(동기/비동기)(70m) – 캔버스 노드/분기/백그라운드 잡  
-6) 플러그인(MCP/OpenAPI)(45m) – 등록/권한/워크플로 호출  
-7) 권한 & 레퍼런스(35m) – RBAC, 외부 레퍼런스 링크  
-8) API(60m) – OpenAI 호환 호출/스트리밍/WS 다이얼로그  
-9) 릴리스 & 관측(30m) – 버전/메트릭/트러블슈팅
-
-> 2일형 옵션: 1–4 (Day1), 5–9 (Day2)
-
-## 준비사항
-- Tencent Cloud 계정 + **ADP 활성화** + 모델 쿼터(예: DeepSeek R1/V3 등)
-- 로컬: Python 3.10+ 또는 Node 18+, `curl`, (옵션) Postman
-- **API Key**는 `.env`에 보관(직접 하드코딩 금지)
-
-`.env` 템플릿 생성:
-```bash
-cp setup/.env.example .env
-# 키/엔드포인트 등 환경변수 입력
-```
-
-## 빠른 시작(콘솔)
-1) **Create Application** → 2) 모델/출력 설정 → 3) **Debug** 테스트 → 4) **Publish** 후 공유 링크 확보(키 비노출 주의)
-
-## 지식베이스
-- PDF/Doc/CSV 업로드 또는 **Q&A** 추가 → 하이브리드/시맨틱 검색, 매칭 임계치/청킹 조정 → Debug에서 **Reference Source** 확인
-
-## 워크플로(싱글 워크플로: 동기/비동기)
-- LLM/Tool/Knowledge/Condition/Loop 노드 구성 → 동기 경로로 기본 챗 UX → **비동기** 분기를 추가해 장기 작업 처리(상태 폴링)
-
-## 플러그인(MCP/OpenAPI)
-- Postman/Swagger 스펙(`setup/postman_collection.json`) 등록 → 최소권한 키 설정 → 워크플로 Tool 노드에서 호출 후 Debug로 응답 확인
-
-## 권한 & 외부 레퍼런스
-- 역할 기반 접근제어(RBAC) 구성 → 필요 시 **External Reference Links** 활성화
-
-## API – OpenAI 호환 호출
-`.env` 예시:
-```ini
-ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
-ADP_API_KEY=YOUR_ADP_API_KEY
-ADP_MODEL=deepseek-r1
-```
-Python/Node 샘플은 본문 예제를 그대로 사용하세요.
-
-## 릴리스 & 관측
-- Release 생성 → 요청/토큰/지연/에러 메트릭 확인 → Preview/Retry로 안전한 롤아웃
-
-## 트러블슈팅
-- 인용/레퍼런스 미출력: 매칭 임계치 하향/청킹 조정/재색인  
-- 비동기 지연: 노드 타임아웃/백그라운드 한도 점검  
-- 플러그인 실패: 인증/네트워크 이그레스/원본 오류 확인  
-- 429/쿼터: 동시성 축소, 스트리밍 활용, 대용량 문서는 사전 배치 처리
-
-## 스크린샷 캡처(요약)
-- **1280×720**, OS 100% 스케일, 좌측 내비 + 페이지 타이틀 포함, 비밀정보는 반드시 마스킹  
-- 파일명은 `assets/screenshots/01_...png` 형식으로 README와 동일하게 저장  
-- (옵션) Playwright 스크립트로 반자동 캡처 가능 – README 하단 예제 참고
-
----
-
-# 🧠 고급 실습 (Advanced Labs)
-
-### 1) 데이터베이스를 임베딩해 지식베이스로 활용
-두 가지 경로가 있습니다.
-- **A. ADP가 내부 색인**: DB를 **CSV/Markdown**으로 덤프 → 콘솔 지식베이스에 업로드 → ADP가 인덱싱
-- **B. 사전 임베딩(이식성)**: 외부 임베딩 모델로 청킹→벡터화→FAISS/PGVector 저장 + 텍스트 스냅샷을 ADP KB에 업로드해 **출처 근거** 제공
-
-> ADP 테넌트에 `/embeddings` 엔드포인트가 없다면, **OpenAI 임베딩**을 사용하고, 대화/워크플로는 ADP를 그대로 사용해도 됩니다.
-
-- 샘플: `samples/python/db_to_embeddings.py`  
-  실행 전 환경변수 예시:
-  ```bash
-  # OpenAI 임베딩 예시
-  export OPENAI_API_KEY=sk-...
-  export OPENAI_EMBEDDINGS_MODEL=text-embedding-3-large
-  # 또는 ADP OpenAI 호환 임베딩
-  export ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
-  export ADP_API_KEY=xxx
-  export ADP_EMBEDDINGS_MODEL=<tenant-embedding-model>
-  python3 samples/python/db_to_embeddings.py
-  ```
-  완료 후 `artifacts/embeddings/products_snapshot.md`를 ADP KB에 업로드하고, **Reference Source**가 표시되는지 확인하세요.
-
-### 2) 멀티‑에이전트(OpenAI + Claude) + 심판(Arbiter)
-- OpenAI와 Claude가 각각 답변 → 심판(예: ADP의 DeepSeek R1)이 비교/통합한 **최종 응답** 생성  
-- ADP 워크플로 캔버스에서는 **두 LLM 노드 → Judge 노드 → Answer 노드**로 구성
-
-- 샘플: `samples/python/multi_agent_panel.py`  
-  환경변수 예시:
-  ```bash
-  export OPENAI_API_KEY=sk-...
-  export OPENAI_MODEL=gpt-4.1-mini
-  export ANTHROPIC_API_KEY=sk-ant-...
-  export ANTHROPIC_MODEL=claude-3.7-sonnet
-  export ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
-  export ADP_API_KEY=xxx
-  export ADP_MODEL=deepseek-r1
-  python3 samples/python/multi_agent_panel.py
-  ```
-
-### 3) 가드레일(Guardrails) 구성
-- **입력 가드**: PII/부적절 콘텐츠 필터(모더레이션 API + 정규식)  
-- **툴 호출 가드**: 목적지 호스트 **허용목록(allowlist)** 기반 이그레스 제어  
-- **출력 가드**: 정책 위반 키워드/패턴 최소 차단 + 경고 메시지 대체  
-- ADP 워크플로 팁: **Pre‑processor**(입력 검사)와 **Post‑processor**(출력 필터)를 추가하고, 위반 시 *Reject→Answer*로 분기
-
-- 샘플 파일:  
-  `samples/python/guardrails.py` (가드 함수),  
-  `samples/python/guardrails_demo.py` (데모 실행)
-
-```bash
-python3 samples/python/guardrails_demo.py
-```
-
-## 추가 아젠다(부록)
-- **DB 임베딩** – 45분: export → chunk → embed → KB 업로드
-- **멀티‑에이전트** – 60분: 패널 디베이트 → Judge 통합
-- **가드레일** – 45분: 입력/툴/출력 레이어 및 워크플로 배선
-
-**권장 실습 디렉터리 매핑**
-```
-08_db_embeddings/          # db_to_embeddings.py 실행 & KB 업로드
-09_multi_agent_panel/      # multi_agent_panel.py 실행 & 워크플로 반영
-10_guardrails/             # pre/post 프로세서 연결 & 차단/허용 시나리오 검증
-```
