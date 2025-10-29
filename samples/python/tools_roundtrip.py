@@ -1,46 +1,46 @@
-import os, json, requests
-base, key, model = os.getenv("ADP_BASE_URL"), os.getenv("ADP_API_KEY"), os.getenv("ADP_MODEL","deepseek-r1")
-HEAD = {"Authorization": f"Bearer {key}", "Content-Type":"application/json"}
+import os, json
+from openai import OpenAI
 
-tools = [{
-  "type":"function",
-  "function":{
-    "name":"get_order_status",
-    "description":"Lookup order status by order_number",
-    "parameters":{
-      "type":"object",
-      "properties":{"order_number":{"type":"string"}},
-      "required":["order_number"]
-    }
-  }
-}]
+# 1. initialize
+base = os.getenv("ADP_BASE_URL"); key = os.getenv("ADP_API_KEY"); model = os.getenv("ADP_MODEL","deepseek-r1")
+HEAD = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
-# 1) Model proposes tool call(s)
-resp = requests.post(f"{base}/chat/completions", headers=HEAD, json={
-  "model": model,
-  "messages":[{"role":"user","content":"ORD-20251025-001 주문 상태 알려줘"}],
-  "tools": tools,
-  "tool_choice": "auto"
-}).json()
+client = OpenAI(
+    api_key=key,
+    base_url=base,
+)
 
-choice = resp["choices"][0]
-msg = choice["message"]
-calls = msg.get("tool_calls", [])
+# 2. define function 
+def get_weather(city):
+    return {"temperature": 22, "conditions": "sunny"}  # 예시 데이터
 
-# 2) Execute the tool(s) (fake response)
-tool_results = []
-for call in calls:
-  if call["type"] == "function" and call["function"]["name"] == "get_order_status":
-    args = json.loads(call["function"]["arguments"])
-    tool_results.append({
-      "role":"tool",
-      "tool_call_id": call["id"],
-      "content": json.dumps({"order_number": args["order_number"], "status":"delivered"})
-    })
-
-# 3) Send tool results back -> final answer
-final = requests.post(f"{base}/chat/completions", headers=HEAD, json={
-  "model": model,
-  "messages":[msg] + tool_results
-}).json()
-print(final["choices"][0]["message"]["content"])
+# 3. main process
+if __name__ == "__main__":
+    # [Step1] model propose tools
+    response = client.chat.completions.create(
+        model=os.getenv("ADP_MODEL", "deepseek-r1"),
+        messages=[{"role": "user", "content": "how is weather in seoul"}],
+        tools=[{
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get weather by city name",
+                "parameters": {"type": "object", "properties": {"city": {"type": "string"}}},
+            }
+        }]
+    )
+    
+    # [Step 2] run tool_call
+    tool_call = response.choices[0].message.tool_calls[0]
+    weather = get_weather(json.loads(tool_call.function.arguments)["city"])
+    
+    # [Step 3] apply tool_call result and final response
+    final_response = client.chat.completions.create(
+        model=os.getenv("ADP_MODEL", "deepseek-r1"),
+        messages=[
+            {"role": "user", "content": "how is weather in seoul"},
+            response.choices[0].message,
+            {"role": "tool", "content": json.dumps(weather), "tool_call_id": tool_call.id}
+        ]
+    )
+    print("final answer:", final_response.choices[0].message.content)

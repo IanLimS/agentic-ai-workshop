@@ -134,36 +134,7 @@ print()
 
 ---
 
-## 5) Node.js — OpenAI SDK (ESM)
-```js
-// samples/node/chat_sdk.mjs
-import 'dotenv/config'
-import OpenAI from 'openai'
-
-const client = new OpenAI({ baseURL: process.env.ADP_BASE_URL, apiKey: process.env.ADP_API_KEY })
-const model = process.env.ADP_MODEL || 'deepseek-r1'
-
-// 1) 논-스트리밍
-const res = await client.chat.completions.create({
-  model, messages: [{ role:'user', content:'Give me 3 bullets on agentic AI.' }]
-})
-console.log(res.choices?.[0]?.message?.content)
-
-// 2) 스트리밍
-const stream = await client.chat.completions.create({
-  model, stream: true,
-  messages: [{ role:'user', content:'Stream a one-line haiku about agents.' }]
-})
-for await (const event of stream) {
-  const delta = event.choices?.[0]?.delta?.content
-  if (delta) process.stdout.write(delta)
-}
-console.log()
-```
-
----
-
-## 6) 임베딩(Embeddings) — KB/RAG의 친구
+## 6) 임베딩(Embeddings) — KB/RAG의 친구 // 이건 아마 안될거라 지우자
 임베딩은 텍스트를 벡터로 바꿔 **유사도 검색**이 가능하도록 합니다. 아래는 Python/Node 예시입니다.
 ```python
 # samples/python/embeddings_sdk.py
@@ -176,16 +147,7 @@ model = os.getenv("ADP_EMBEDDINGS_MODEL","text-embedding-3-large")
 emb = client.embeddings.create(model=model, input=["hello world", "agentic ai"])
 print(len(emb.data[0].embedding), len(emb.data[1].embedding))
 ```
-```js
-// samples/node/embeddings_sdk.mjs
-import 'dotenv/config'
-import OpenAI from 'openai'
-const client = new OpenAI({ baseURL: process.env.ADP_BASE_URL, apiKey: process.env.ADP_API_KEY })
-const model = process.env.ADP_EMBEDDINGS_MODEL || 'text-embedding-3-large'
 
-const r = await client.embeddings.create({ model, input: ['hello', 'agentic ai'] })
-console.log(r.data[0].embedding.length, r.data[1].embedding.length)
-```
 > **실무 팁**: 벡터 차원 수는 모델에 따라 다릅니다. 인덱스(FAISS/PGVector) 생성 시 동일모델로 일관성 있게 생성/조회하세요.
 
 ---
