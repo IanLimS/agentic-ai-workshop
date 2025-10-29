@@ -1,73 +1,48 @@
+# 📘 ADP API/SDK 워크샵 (KR)
 
+> 이 워크샵은 **콘솔 없이**도 ADP(TCADP)를 바로 호출해볼 수 있도록 **API/SDK 중심**으로 구성되어 있습니다. 
+> 💡 콘솔에서 애플리케이션을 만드는 절차가 필요하다면 `labs/01_quickstart_console/quick_start_from_console.md`를 먼저 참고하세요.
 
-# ADP 퀵스타트 — 콘솔 & API (KR → EN 하단)
+## 0) 우리가 만들 것
+- `.env` 기반 환경 변수 세팅 → **OpenAI 호환 API**로 **chat/embeddings** 호출
+- **스트리밍(SSE)** 수신 방법 이해
+- **툴콜(Function/Tools)** 왕복 패턴 익히기 (모델이 함수 호출 제안 → 실제 실행 → 결과 재전달 → 최종 답변)
+- **오류 처리/백오프** 공통 패턴 적용
 
-> 이 문서는 **ADP(Tencent Cloud Agent Development Platform)**에서 애플리케이션을 생성/설정/게시한 다음, **OpenAI 호환 API**로 호출해 보는 빠른 실습 가이드입니다. 먼저 **한글 가이드 전체**가 나오고, 문서 하단에 **영문 가이드 전체**가 이어집니다.
-
----
-
-## 0) 목표 (Goals)
-- ADP 애플리케이션 생성 후 **Publish**까지 완료
-- (선택) 지식베이스를 연결하고 **출처(Reference Sources)**를 검증
-- **OpenAI 호환 API**로 ADP를 호출 (curl, Python, Node)
-
----
-
-## 1) 준비사항 (Prereqs)
-- **ADP 활성화** 및 모델 쿼터가 있는 텐센트 클라우드 계정
-- 로컬 도구: `curl`, **Python 3.10+** 또는 **Node 18+** (둘 중 하나만 있어도 됨)
-- (옵션) Postman
-
-> ⚠️ API Key는 저장소에 커밋하지 마세요. `.env` 파일과 비밀 관리자(Secrets Manager)를 사용하세요.
+> 왜 OpenAI 호환?  
+> ADP는 OpenAI 스타일의 엔드포인트(예: `/chat/completions`, `/embeddings`)를 제공합니다. 덕분에 익숙한 SDK(파이썬/노드)로 빠르게 연동할 수 있고, 코드 변경이 최소화됩니다.
 
 ---
 
-## 2) 환경 설정 (Environment Setup)
-레포 루트에서 `.env` 템플릿을 복사하고 값을 채워 넣습니다.
-```bash
-# repo root에서
-cp setup/.env.example .env
-```
-`.env` 편집 (예시):
-```ini
-ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
-ADP_API_KEY=YOUR_ADP_API_KEY
-ADP_MODEL=deepseek-r1
-```
-셸에 환경변수 로드:
-```bash
-# macOS/Linux
-export $(grep -v '^#' .env | xargs)
-```
-```powershell
-# Windows PowerShell
-Get-Content .env | ForEach-Object {
-  if ($_ -and -not $_.StartsWith('#')) { $name,$value = $_.Split('='); $env:$name=$value }
-}
-```
+## 1) 준비물
+- ADP 활성화 & 모델 쿼터 (예: `deepseek-r1`)
+- 로컬 도구: `curl`, **Python 3.10+** 또는 **Node 18+**
+- 레포 루트에 `.env` 생성:
+  ```ini
+  ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
+  ADP_API_KEY=YOUR_ADP_API_KEY
+  ADP_MODEL=deepseek-r1
+  # (옵션) 임베딩 전용 모델을 분리하고 싶다면
+  # ADP_EMBEDDINGS_MODEL=text-embedding-3-large
+  ```
+- 셸에 적용:
+  ```bash
+  # macOS/Linux
+  export $(grep -v '^#' .env | xargs)
+  ```
+  ```powershell
+  # Windows PowerShell
+  Get-Content .env | ForEach-Object {
+    if ($_ -and -not $_.StartsWith('#')) { $name,$value = $_.Split('='); $env:$name=$value }
+  }
+  ```
+
+> **자주 하는 실수**: `Bearer` 접두사 누락, `/v1` 경로 오타, 모델명 오타.
 
 ---
 
-## 3) 콘솔 빠른 시작 (Console Quick Start)
-1. ADP 콘솔에서 **Create Application**
-2. **모델/출력 설정(Configure)** → **Debug**에서 프롬프트 테스트
-3. **Publish** 클릭 → 공유 URL 보관
-
-**참고 스크린샷**: `assets/screenshots/01_create_app.png`, `02_configure_model_output.png`, `03_debug_panel.png`, `04_publish_share.png`
-
----
-
-## 4) (선택) 지식베이스 연결 (Knowledge Base)
-- PDF/CSV/XLSX 또는 **Q&A** 업로드
-- 검색 모드: **Hybrid** 권장(또는 Semantic)
-- Debug에서 답변에 **Reference Sources**(출처 링크)가 포함되는지 확인
-
-**참고 스크린샷**: `05_kb_upload.png`, `06_kb_qna.png`, `07_kb_reference.png`
-
----
-
-## 5) API 호출 — curl
-기본(논‑스트리밍) 예시:
+## 2) 첫 호출 — cURL로 연기 풀기
+가장 단순한(논‑스트리밍) 호출입니다. **요청 JSON 구조**(`model`, `messages`)에 주목하세요.
 ```bash
 curl -s -X POST "$ADP_BASE_URL/chat/completions" \
   -H "Authorization: Bearer $ADP_API_KEY" \
@@ -75,264 +50,299 @@ curl -s -X POST "$ADP_BASE_URL/chat/completions" \
   -d '{
     "model": "'"${ADP_MODEL:-deepseek-r1}"'",
     "messages": [
-      {"role":"user","content":"에이전틱 AI에 대해 3가지 포인트를 알려줘."}
+      {"role":"user","content":"에이전틱 AI가 해결하는 문제를 3가지로 요약해줘."}
     ]
   }' | jq -r '.choices[0].message.content'
 ```
+**무엇을 확인하나요?**
+- 200 OK & 응답 JSON 
+- `choices[0].message.content`에 자연스러운 답변
+
+**스트리밍(SSE)**은 `"stream": true`만 추가하면 됩니다. 터미널에서는 `data: ...`가 연속 출력되고 마지막에 `data: [DONE]`가 옵니다.
 
 ---
 
-## 6) API 호출 — Python
-`samples/python/quick_chat.py`로 저장:
+## 3) Python — `requests`와 스트리밍
+아래 파일명으로 저장해 두고 바로 실행해 보세요.
 ```python
+# samples/python/chat_requests.py
 import os, sys, json, requests
 base = os.getenv("ADP_BASE_URL"); key = os.getenv("ADP_API_KEY"); model = os.getenv("ADP_MODEL","deepseek-r1")
 HEAD = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
-# 1) 일반 호출
+# 1) 논-스트리밍
 r = requests.post(f"{base}/chat/completions", headers=HEAD, json={
-    "model": model,
-    "messages": [{"role":"user","content":"에이전틱 AI의 3가지 활용사례를 알려줘."}]
+  "model": model,
+  "messages": [{"role":"user","content":"에이전틱 AI 3가지 활용사례를 알려줘."}]
 })
-r.raise_for_status(); print(r.json()["choices"][0]["message"]["content"]) 
+r.raise_for_status()
+print(r.json()["choices"][0]["message"]["content"])
 
 # 2) 스트리밍(SSE)
 with requests.post(f"{base}/chat/completions", headers=HEAD, json={
-    "model": model,
-    "stream": True,
-    "messages": [{"role":"user","content":"에이전트에 관한 짧은 하이쿠를 스트리밍해줘."}]
+  "model": model, "stream": True,
+  "messages": [{"role":"user","content":"에이전트에 관한 짧은 하이쿠를 스트리밍해줘."}]
 }, stream=True) as s:
-    s.raise_for_status()
-    for line in s.iter_lines():
-        if not line: continue
-        if line.startswith(b"data:"):
-            chunk = line[5:].strip()
-            if chunk == b"[DONE]": break
-            try:
-                obj = json.loads(chunk)
-                sys.stdout.write(obj.get("choices", [{}])[0].get("delta", {}).get("content", ""))
-                sys.stdout.flush()
-            except Exception:
-                pass
+  s.raise_for_status()
+  for line in s.iter_lines():
+    if not line: continue
+    if line.startswith(b"data:"):
+      chunk = line[5:].strip()
+      if chunk == b"[DONE]": break
+      try:
+        obj = json.loads(chunk)
+        sys.stdout.write(obj.get("choices", [{}])[0].get("delta", {}).get("content", ""))
+        sys.stdout.flush()
+      except Exception:
+        pass
 print()
 ```
-실행:
-```bash
-python3 samples/python/quick_chat.py
-```
+> **왜 스트리밍?** 사용자 경험(UX) 측면에서 대기 시간을 체감상 줄이고, 긴 답변도 자연스럽게 보여줄 수 있습니다.
 
 ---
 
-## 7) API 호출 — Node (ESM)
-`samples/node/quick_chat.mjs`로 저장:
+## 4) Python — OpenAI **공식 SDK**로 더 간결하게
+`base_url`만 ADP로 바꿔주면 됩니다.
+```python
+# samples/python/chat_sdk.py
+import os
+from openai import OpenAI
+
+client = OpenAI(base_url=os.getenv("ADP_BASE_URL"), api_key=os.getenv("ADP_API_KEY"))
+model = os.getenv("ADP_MODEL","deepseek-r1")
+
+# 1) 논-스트리밍
+res = client.chat.completions.create(
+  model=model,
+  messages=[{"role":"user","content":"Give me 3 bullets about agentic AI."}]
+)
+print(res.choices[0].message.content)
+
+# 2) 스트리밍
+for event in client.chat.completions.create(
+  model=model, stream=True,
+  messages=[{"role":"user","content":"Stream a one-line haiku about agents."}]
+):
+  delta = getattr(event.choices[0], "delta", None)
+  if delta and delta.content:
+    print(delta.content, end="", flush=True)
+print()
+```
+> **포인트**: SDK를 쓰면 직렬화/예외 처리/타입 힌트 지원이 편리합니다.
+
+---
+
+## 5) Node.js — OpenAI SDK (ESM)
 ```js
+// samples/node/chat_sdk.mjs
 import 'dotenv/config'
-const base = process.env.ADP_BASE_URL
-const key  = process.env.ADP_API_KEY
-const model= process.env.ADP_MODEL || 'deepseek-r1'
+import OpenAI from 'openai'
 
-const res = await fetch(`${base}/chat/completions`, {
-  method: 'POST',
-  headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    model,
-    messages: [{ role: 'user', content: '에이전틱 AI의 대표 유스케이스 3가지를 말해줘.' }]
-  })
+const client = new OpenAI({ baseURL: process.env.ADP_BASE_URL, apiKey: process.env.ADP_API_KEY })
+const model = process.env.ADP_MODEL || 'deepseek-r1'
+
+// 1) 논-스트리밍
+const res = await client.chat.completions.create({
+  model, messages: [{ role:'user', content:'Give me 3 bullets on agentic AI.' }]
 })
-const j = await res.json()
-console.log(j.choices?.[0]?.message?.content)
+console.log(res.choices?.[0]?.message?.content)
+
+// 2) 스트리밍
+const stream = await client.chat.completions.create({
+  model, stream: true,
+  messages: [{ role:'user', content:'Stream a one-line haiku about agents.' }]
+})
+for await (const event of stream) {
+  const delta = event.choices?.[0]?.delta?.content
+  if (delta) process.stdout.write(delta)
+}
+console.log()
 ```
-실행:
-```bash
-node samples/node/quick_chat.mjs
+
+---
+
+## 6) 임베딩(Embeddings) — KB/RAG의 친구
+임베딩은 텍스트를 벡터로 바꿔 **유사도 검색**이 가능하도록 합니다. 아래는 Python/Node 예시입니다.
+```python
+# samples/python/embeddings_sdk.py
+import os
+from openai import OpenAI
+
+client = OpenAI(base_url=os.getenv("ADP_BASE_URL"), api_key=os.getenv("ADP_API_KEY"))
+model = os.getenv("ADP_EMBEDDINGS_MODEL","text-embedding-3-large")
+
+emb = client.embeddings.create(model=model, input=["hello world", "agentic ai"])
+print(len(emb.data[0].embedding), len(emb.data[1].embedding))
 ```
+```js
+// samples/node/embeddings_sdk.mjs
+import 'dotenv/config'
+import OpenAI from 'openai'
+const client = new OpenAI({ baseURL: process.env.ADP_BASE_URL, apiKey: process.env.ADP_API_KEY })
+const model = process.env.ADP_EMBEDDINGS_MODEL || 'text-embedding-3-large'
 
----
-
-## 8) (선택) WebSocket 대화
-테넌트에서 대화용 WebSocket을 제공하는 경우, 세션 토큰 발급 후 **증분(delta)**를 수신할 수 있습니다. 레포의 `samples/python/websocket_dialog_example.py`를 참고하세요.
-
----
-
-## 9) 문제 해결 (Troubleshooting)
-- **401/403**: API Key 불일치 또는 `Bearer` 접두사 누락
-- **404**: Base URL 경로(`/v1`) 불일치, 엔드포인트 미활성화
-- **429**: 레이트 리밋 → 동시성 축소, 스트리밍 사용
-- **인용 없음**: 매칭 임계치를 낮추거나 KB 재색인
-- 네트워크 정책(프록시/VPC), 모델명/엔드포인트를 `.env`로 재확인
-
----
-
-## 10) 다음 실습 (Next Labs)
-- **02_knowledge_base**: 파일/Q&A 업로드와 인용 검증
-- **03_workflow_single_async**: 동기 vs 비동기 분기 설계
-- **04_plugin_mcp**: OpenAPI/MCP 플러그인 등록 후 Tool 노드 호출
-
-
----
-
-# ADP Quick Start — Console & API (EN)
-
-> Build and test a working **Agentic AI** app on **ADP** (Tencent Cloud Agent Development Platform), then call it via an **OpenAI‑compatible API**. This is the English version (the Korean version is above).
-
----
-
-## 0) Goals
-- Create and **Publish** an ADP application
-- (Optional) Attach a Knowledge Base and validate **Reference Sources**
-- Call ADP via **OpenAI‑compatible** APIs (curl, Python, Node)
-
----
-
-## 1) Prereqs
-- Tencent Cloud account with **ADP** enabled and model quota
-- Local tools: `curl`, **Python 3.10+** or **Node 18+**
-- (Optional) Postman
-
-> ⚠️ Never commit API keys. Use `.env` and a secrets manager.
-
----
-
-## 2) Environment Setup
-From repo root:
-```bash
-cp setup/.env.example .env
+const r = await client.embeddings.create({ model, input: ['hello', 'agentic ai'] })
+console.log(r.data[0].embedding.length, r.data[1].embedding.length)
 ```
-Edit `.env`:
-```ini
-ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
-ADP_API_KEY=YOUR_ADP_API_KEY
-ADP_MODEL=deepseek-r1
-```
-Export envs:
-```bash
-# macOS/Linux
-export $(grep -v '^#' .env | xargs)
-```
-```powershell
-# Windows PowerShell
-Get-Content .env | ForEach-Object {
-  if ($_ -and -not $_.StartsWith('#')) { $name,$value = $_.Split('='); $env:$name=$value }
+> **실무 팁**: 벡터 차원 수는 모델에 따라 다릅니다. 인덱스(FAISS/PGVector) 생성 시 동일모델로 일관성 있게 생성/조회하세요.
+
+---
+
+## 7) 툴콜(Function/Tools) — “모델이 함수를 부르게 하자”
+흐름은 ① 모델이 도구 호출 제안 → ② 애플리케이션이 **실행** → ③ 결과를 **tool 메시지**로 재전달 → ④ 모델이 **최종 답변** 정리 입니다.
+```json
+{
+  "type": "function",
+  "function": {
+    "name": "get_order_status",
+    "description": "Lookup order status by order_number",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "order_number": { "type": "string", "description": "e.g., ORD-20251025-001" }
+      },
+      "required": ["order_number"]
+    }
+  }
 }
 ```
+```python
+# samples/python/tools_roundtrip.py
+import os, json, requests
+base, key, model = os.getenv("ADP_BASE_URL"), os.getenv("ADP_API_KEY"), os.getenv("ADP_MODEL","deepseek-r1")
+HEAD = {"Authorization": f"Bearer {key}", "Content-Type":"application/json"}
+
+tools = [{
+  "type":"function",
+  "function":{
+    "name":"get_order_status",
+    "description":"Lookup order status by order_number",
+    "parameters":{
+      "type":"object",
+      "properties":{"order_number":{"type":"string"}},
+      "required":["order_number"]
+    }
+  }
+}]
+
+# 1) 모델이 도구 호출 제안
+resp = requests.post(f"{base}/chat/completions", headers=HEAD, json={
+  "model": model,
+  "messages":[{"role":"user","content":"ORD-20251025-001 주문 상태 알려줘"}],
+  "tools": tools,
+  "tool_choice": "auto"
+}).json()
+
+choice = resp["choices"][0]
+msg = choice["message"]
+calls = msg.get("tool_calls", [])
+
+# 2) 툴 실행(여기선 가짜 응답)
+tool_results = []
+for call in calls:
+  if call["type"] == "function" and call["function"]["name"] == "get_order_status":
+    args = json.loads(call["function"]["arguments"])
+    tool_results.append({
+      "role":"tool",
+      "tool_call_id": call["id"],
+      "content": json.dumps({"order_number": args["order_number"], "status":"delivered"})
+    })
+
+# 3) 모델에 결과 전달 → 최종 답변
+final = requests.post(f"{base}/chat/completions", headers=HEAD, json={
+  "model": model,
+  "messages":[msg] + tool_results
+}).json()
+print(final["choices"][0]["message"]["content"])
+```
+> **디자인 팁**: 실제에선 이 도구가 내부 REST/DB를 호출합니다. 실패 시 재시도/대체 경로를 설계해 두세요.
 
 ---
 
-## 3) Console Quick Start
-1. **Create Application** in ADP Console
-2. **Configure** model & output; test prompts in **Debug**
-3. Click **Publish** and keep the share URL
+## 8) 오류 처리 & 백오프 — “회복 탄력성”의 핵심 패턴
+- **429 (rate limit)**: 지수 백오프 + **Jitter**를 적용해 동시성 폭주를 피합니다.
+- **5xx (서버 오류)**: 멱등(idempotent)한 요청만 재시도합니다.
+- **네트워크/타임아웃**: 명시적 타임아웃과 로깅을 추가합니다.
+```python
+import random, time, requests
 
-**Screenshots**: `assets/screenshots/01_create_app.png`, `02_configure_model_output.png`, `03_debug_panel.png`, `04_publish_share.png`
+def backoff_retry(request_fn, max_tries=5, base=0.5, cap=8.0):
+  for i in range(max_tries):
+    try:
+      return request_fn()
+    except requests.HTTPError as e:
+      code = e.response.status_code
+      if code not in (429,500,502,503,504):
+        raise
+    sleep = min(cap, base * (2 ** i)) + random.uniform(0, 0.2)
+    time.sleep(sleep)
+  raise RuntimeError("max retries exceeded")
+```
 
 ---
 
-## 4) (Optional) Knowledge Base
-- Upload PDFs/CSVs/XLSX or **Q&A**
-- Retrieval: **Hybrid** recommended (or Semantic)
-- In Debug, verify answers include **Reference Sources**
-
-**Screenshots**: `05_kb_upload.png`, `06_kb_qna.png`, `07_kb_reference.png`
+## 9) 마무리 & 다음 단계
+- 이제 **chat/stream/embeddings/tools**를 모두 다뤘습니다. 
+- 다음 단계로 **KB(RAG) 결합**, **워크플로우/에이전트화**, **플러그인(MCP/OpenAPI)** 연동을 진행하세요. 
+- 팀 내 공유를 위해 위 샘플을 `samples/python`, `samples/node` 경로에 파일로 만들어 커밋하면 실습 준비가 더 빨라집니다.
 
 ---
 
-## 5) API — curl
-Minimal, non‑streaming:
+# 📗 ADP API/SDK Workshop (EN)
+
+> This workshop focuses on **API/SDK only** (no Console). The goal is to help you understand *why* each step matters while giving copy‑paste runnable samples. Korean guide appears above; this is the full English version.
+> 💡 Need the console-first walkthrough? Read `labs/01_quickstart_console/quick_start_from_console.md`.
+
+## 0) What we’ll build
+- Configure env vars, call **OpenAI‑compatible** **chat/embeddings** endpoints
+- Handle **SSE streaming**
+- Implement a full **tool‑calling** round trip
+- Apply **error handling/backoff** patterns
+
+## 1) Prereqs
+- ADP enabled & model quota (e.g., `deepseek-r1`)
+- Tools: `curl`, **Python 3.10+** or **Node 18+**
+- `.env` at repo root:
+  ```ini
+  ADP_BASE_URL=https://api.lkeap.tencentcloud.com/v1
+  ADP_API_KEY=YOUR_ADP_API_KEY
+  ADP_MODEL=deepseek-r1
+  # ADP_EMBEDDINGS_MODEL=text-embedding-3-large
+  ```
+- Load into your shell (macOS/Linux or PowerShell on Windows)
+
+> **Common pitfalls**: missing `Bearer` prefix, wrong `/v1` path, misspelled model name.
+
+## 2) First call with cURL
+Non‑streaming request:
 ```bash
 curl -s -X POST "$ADP_BASE_URL/chat/completions" \
   -H "Authorization: Bearer $ADP_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "'"${ADP_MODEL:-deepseek-r1}"'",
-    "messages": [
-      {"role":"user","content":"Give me 3 bullets on agentic AI."}
-    ]
+    "messages": [{"role":"user","content":"Give me 3 bullets on agentic AI."}]
   }' | jq -r '.choices[0].message.content'
 ```
+**Streaming**: add `"stream": true` and read `data:` chunks until `[DONE]`.
 
----
+## 3) Python — `requests` (non‑stream + SSE)
+See `samples/python/chat_requests.py` in the KR section; it prints the final message content and an SSE stream progressively.
 
-## 6) API — Python
-Save as `samples/python/quick_chat.py`:
-```python
-import os, sys, json, requests
-base = os.getenv("ADP_BASE_URL"); key = os.getenv("ADP_API_KEY"); model = os.getenv("ADP_MODEL","deepseek-r1")
-HEAD = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+## 4) Python — OpenAI **official SDK**
+Specify `base_url` to point at ADP, then call `chat.completions.create(...)`. Streaming is one `stream=True` flag away.
 
-# Non‑streaming
-r = requests.post(f"{base}/chat/completions", headers=HEAD, json={
-    "model": model,
-    "messages": [{"role":"user","content":"List 3 agentic AI use cases."}]
-})
-r.raise_for_status(); print(r.json()["choices"][0]["message"]["content"]) 
+## 5) Node.js — OpenAI SDK (ESM)
+Create a client with `{ baseURL, apiKey }`, then call `chat.completions.create(...)`. Use async iteration to consume the stream.
 
-# Streaming (SSE)
-with requests.post(f"{base}/chat/completions", headers=HEAD, json={
-    "model": model,
-    "stream": True,
-    "messages": [{"role":"user","content":"Stream a short haiku about agents."}]
-}, stream=True) as s:
-    s.raise_for_status()
-    for line in s.iter_lines():
-        if not line: continue
-        if line.startswith(b"data:"):
-            chunk = line[5:].strip()
-            if chunk == b"[DONE]": break
-            try:
-                obj = json.loads(chunk)
-                sys.stdout.write(obj.get("choices", [{}])[0].get("delta", {}).get("content", ""))
-                sys.stdout.flush()
-            except Exception:
-                pass
-print()
-```
-Run:
-```bash
-python3 samples/python/quick_chat.py
-```
+## 6) Embeddings
+Turn text into vectors for similarity search; keep the same model across index & query. See KR/EN code blocks for Python/Node samples.
 
----
+## 7) Tool calling (functions/tools)
+Use a JSON schema to advertise functions. The model proposes a `tool_call`; you execute it; send the result back as a `tool` message; the model synthesizes the final answer. See `tools_roundtrip.py`.
 
-## 7) API — Node (ESM)
-Save as `samples/node/quick_chat.mjs`:
-```js
-import 'dotenv/config'
-const base = process.env.ADP_BASE_URL
-const key  = process.env.ADP_API_KEY
-const model= process.env.ADP_MODEL || 'deepseek-r1'
+## 8) Errors & backoff
+Handle 429/5xx with exponential backoff + jitter; set explicit timeouts and log failures.
 
-const res = await fetch(`${base}/chat/completions`, {
-  method: 'POST',
-  headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    model,
-    messages: [{ role: 'user', content: 'Give me 3 bullets on agentic AI.' }]
-  })
-})
-const j = await res.json()
-console.log(j.choices?.[0]?.message?.content)
-```
-Run:
-```bash
-node samples/node/quick_chat.mjs
-```
-
----
-
-## 8) (Optional) WebSocket Dialog
-If your tenant exposes a dialog WS, use a session token and stream deltas. See `samples/python/websocket_dialog_example.py` in the repo.
-
----
-
-## 9) Troubleshooting
-- **401/403**: wrong API key or missing `Bearer` prefix
-- **404**: base URL path mismatch (`/v1`), or endpoint disabled
-- **429**: rate‑limited → reduce concurrency, enable streaming
-- **No citations**: lower match threshold or re‑index KB
-
----
-
-## 10) Next labs
-- **02_knowledge_base**: file/Q&A upload and citations
-- **03_workflow_single_async**: sync vs async branches
-- **04_plugin_mcp**: register OpenAPI/MCP plugin and call from Tool node
+## 9) Wrap‑up & next steps
+You now have chat, streaming, embeddings, tools, and resiliency patterns. Next, combine with **KB (RAG)**, orchestrate **workflows/agents**, and integrate **plugins (MCP/OpenAPI)**.
