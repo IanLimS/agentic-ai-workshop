@@ -41,7 +41,7 @@
 
 ---
 
-## 2) 첫 호출 — cURL로 연기 풀기
+## 2) 첫 호출 — cURL 을 이용해 호출
 가장 단순한(논‑스트리밍) 호출입니다. **요청 JSON 구조**(`model`, `messages`)에 주목하세요.
 ```bash
 curl -s -X POST "$ADP_BASE_URL/chat/completions" \
@@ -65,6 +65,8 @@ curl -s -X POST "$ADP_BASE_URL/chat/completions" \
 ---
 
 ## 3) Python — `requests`와 스트리밍
+
+  
 아래 파일명으로 저장해 두고 바로 실행해 보세요.
 ```python
 # samples/python/chat_requests.py
