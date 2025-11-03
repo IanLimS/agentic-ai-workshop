@@ -29,9 +29,9 @@
 > 활성화 후 좌측 메뉴의 **Application Management**로 이동해 앱 생성 플로우를 시작합니다.
 
 
-![App Activation](/assets/01_quick_start/001_adp_activation.png)
+![App Activation](./assets/001_adp_activation.png)
 
-![App Creation](/assets/01_quick_start/002_create_app.png)
+![App Creation](./assets/002_create_app.png)
 
 
 ## 1) 애플리케이션 만들기 (Create Application)
@@ -39,7 +39,7 @@
 2. 앱 기본 정보(이름/아이콘 등) 입력 후 저장  
    - 저장 시 보안 검토가 수행되며 통과 후 반영됩니다.
 3. 생성이 완료되면 앱 상세 페이지로 진입
-![New App Creation](/assets/01_quick_start/003_create_new_app.png)
+![New App Creation](./assets/003_create_new_app.png)
 
 ---
 
@@ -52,9 +52,9 @@
 2. 업로드 후 문서 파싱/분할/저장이 자동 진행됩니다.
 3. **Document 탭**에서 문서의 **문자 수/업데이트 시각/상태**를 확인하고, 
    만료 시간 설정/다운로드/삭제/**검색 범위 설정**도 수행할 수 있습니다.
-![Knowedge Management](/assets/01_quick_start/004_knowledge_management_button.png)
+![Knowedge Management]./assets/004_knowledge_management_button.png)
 
-![Import Files](/assets/01_quick_start/005_import_files.png)
+![Import Files](./assets/005_import_files.png)
 
 ---
 
@@ -63,8 +63,8 @@
 2. **File**/**Q&A** 스위치를 **On**
 3. **지식 기반 외 질문 처리**가 엄격해야 한다면, 
    - *“지식 소스에 벗어난 질문은 (사전 지정한) 안내문으로만 응답”* 모드로 전환
-    ![Change Model](/assets/01_quick_start/008_change_model.png)
-    ![Set Reasoning](/assets/01_quick_start/009_set_reasoning.png)
+    ![Change Model](./assets/008_change_model.png)
+    ![Set Reasoning](./assets/009_set_reasoning.png)
 
 ---
 
@@ -72,7 +72,7 @@
 1. **Dialogue Test(디버그 창)** 에서 질문 입력
 2. 답변의 **Reference source(출처)** 버튼을 클릭해 인용 문서/페이지를 확인
    - 업로드한 PDF/csv/xlsx/Q&A 연결되어 있어야 함
-   ![Verify References](/assets/01_quick_start/010_verify_app.png)
+   ![Verify References](./assets/010_verify_app.png)
 
 ---
 
@@ -81,7 +81,7 @@
 2. **Release Management → API Call Information** 에서 아래를 확인
    - **경험(체험) 링크**, 공유용 URL/QR
    - **API Key** 표시(권한에 따라 표시) 및 **API 호출 가이드** 링크
-     ![Release Management](/assets/01_quick_start/011_release_app.png)
+     ![Release Management](./assets/011_release_app.png)
 
 ---
 
@@ -95,7 +95,7 @@
 
 ## 🧪 (부록) 간단 API 호출
 > 콘솔 중심 워크샵이므로 선택 사항입니다. Release Management에서 API Key 발급을 확인한 뒤 실행하세요.
-    ![API Key](/assets/01_quick_start/012_manage_apikey.png)
+    ![API Key](./assets/012_manage_apikey.png)
 
 ```bash
 # .env에 다음이 있다고 가정

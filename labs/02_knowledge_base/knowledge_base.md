@@ -1,38 +1,31 @@
-# 🧠 Knowledge Base Workshop — 지식을 ‘이해하고’ 추가·검증하는 두 가지 길 (KR → EN below)
-
-> 이 랩은 **지식(파일/표/DB/Q&A)**을 ADP(TCADP)에 연결하고, **콘솔**과 **API** 두 방식으로 **왜 그렇게 하는지까지** 이해하도록 돕는 “설명형(teacher-style)” 워크샵입니다. 스텝 바이 스텝의 나열이 아니라, 각각의 단계가 **무엇을**, **왜**, **어떻게** 바꾸는지 맥락을 먼저 잡아드립니다.
-
----
+# 🧠 Knowledge Base Workshop
 
 ## 0) 왜 이 랩을 하나요? (문제의식 → 해결)
 실무에서 모델이 “그럴듯하지만 근거 없는” 답을 내놓는 이유는 간단합니다. **모델이 알아야 할 문서들과 연결이 느슨**하기 때문이죠. 
 이 랩은 두 가지 길로 이 문제를 해결합니다:
 
 1) **콘솔 경로(손으로 익히기)**: 파일을 올리고 색인 옵션을 만지며, **출처(Reference Sources)**가 어떻게 달라지는지 감각을 잡습니다.
-2) **API 경로(자동화로 굳히기)**: 같은 앱을 OpenAI 호환 API로 호출해, **JSON 응답과 인용**을 강제함으로써 파이프라인에서 **검증 가능한 흐름**을 만듭니다.
-
-> 목표 요약: *“지식을 연결하면 답변은 어떻게 달라지는가?”*를 **체감**하고, 그 과정을 **코드로 재현**합니다.
+2) **Python 경로(자동화로 굳히기)**: 동일 앱을 **Python 예제 스크립트**로 호출해 **JSON 응답과 인용**을 강제하고, 파이프라인에서 **검증 가능한 흐름**을 구성합니다.
 
 ---
 
 ## 1) 멘탈 모델: ADP의 지식 흐름을 머릿속에 그려보기
 - **업로드(문서/표/스냅샷/Q&A)** → **파싱/청킹/색인** → (질문 시) **검색/Rerank** → **생성(답변+인용)**
-- **Hybrid 검색**은 키워드·벡터를 함께 써서, 숫자/코드/SKU 같은 “정확 단어”와 “의미 유사성”을 동시에 잡습니다.
-- **청크 크기(예: 800–1200)** 와 **오버랩(예: 100–200)** 은 *“한 번에 가져올 맥락의 폭”* 을 조절합니다. 너무 작으면 문맥이 끊기고, 너무 크면 잡음이 늘어납니다.
-- **Reference Sources**는 말 그대로 “답의 근거 문서/위치”를 보여줍니다. 운영자 관점의 **디버깅 현미경**입니다.
-
-> 기억법: *업로드는 ‘준비’, 색인은 ‘정렬’, 검색은 ‘발견’, 생성은 ‘설명’.*
+- **Mixed 검색**은 키워드·벡터를 함께 써서, 숫자/코드/SKU 같은 “정확 단어”와 “의미 유사성”을 동시에 잡습니다.
+- **청크 크기(예: 800–1200)** 와 **오버랩(예: 100–200)** 은 *“한 번에 가져올 맥락의 폭”* 을 조절합니다. 너무 작으면 문맥이 끊기고, 너무 크면 Noise 가 늘어납니다.
+- **Reference Sources**는 말 그대로 “답의 근거 문서/위치”를 보여줍니다. 응답에 신뢰를 더하고, 운영자 관점의 **디버깅 인사이트를** 추가 합니다.
 
 ---
 
-## 2) 준비물 & 환경 (가볍게 점검)
+## 2) 준비물 & 환경 세팅
 - ADP 활성화 계정과 모델 쿼터(예: `deepseek-r1`)
 - 터미널에서 아래 커맨드를 입력해서 환경을 셋팅합니다.
   ```bash
   export ADP_BASE_URL="https://api.lkeap.tencentcloud.com/v1"
-  export ADP_API_KEY="YOUR_ADP_API_KEY"   # 실제 키로 바꿔주세요
+  export ADP_API_KEY="YOUR_ADP_API_KEY"   # 발급 키로 교체
   export ADP_MODEL="deepseek-r1"
   ```
+
 **문서/이미지 업로드 제한 (운영 매뉴얼 기준)**
 - 문서 업로드 지원 형식: **doc, docx, ppt, pptx, pdf, txt**
 - 단일 문서 제한: **최대 15MB / 최대 1,000페이지**
@@ -46,38 +39,43 @@
 ---
 
 ## 3) 콘솔 경로 — 손으로 이해하는 색인과 인용
-> 이번 파트의 목표는 *“파일을 올리면 ADP가 내부에서 무엇을 하는지”* 를 **감각**으로 익히는 것입니다.
+> 이 절의 목표는 *“파일 업로드 시 ADP 내부 처리(파싱/청킹/색인/검색/인용)”* 를 **체계적으로 이해**하는 것입니다.
 
 ### 3-1. 앱 선택/생성
 ADP Console → **Application Management**에서 새 앱을 만들거나 기존 앱을 선택하세요. 이름은 *“kb-lab”* 정도로 간단히.
 
 ### 3-2. Knowledge Management: 파일을 올릴 때의 생각의 흐름
-콘솔의 **지식베이스 관리** 화면에서 다음 작업을 지원합니다: **문서 가져오기(웹/로컬)**, **문서 다운로드**, **문서 삭제**. 업로드한 문서는 파싱/청킹/색인 과정을 거쳐 질의 시 검색–재랭크–생성 단계에서 참조됩니다. 
+콘솔의 **Knowledge** 화면에서 다음 작업을 지원합니다: **문서 가져오기(웹/로컬)**, **문서 다운로드**, **문서 삭제**. 업로드한 문서는 파싱/청킹/색인 과정을 거쳐 질의 시 검색–재랭크–생성 단계에서 참조됩니다. 
 
-- **PDF** [Construction_Guide_ Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf](./../../samples/materials/Construction_Guide_%20Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf) ` — 정책/표/일러스트가 섞인 문서형 지식 검증용
+- **PDF** [Construction_Guide_ Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf](./../../samples/materials/Construction_Guide_%20Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf) — 정책/표/일러스트가 섞인 문서형 지식 검증용
 - **CSV** [Product_Catalog_Snippet.csv](./../../samples/materials/Product_Catalog_Snippet.csv) — SKU/가격 등 표 기반 정답 검증용 (시트/헤더 정합성 중요)
 - **XLSX** [Store_Locations.xlsx](./../../samples/materials/Store_Locations.xlsx) — 시트/열 이름을 명확히, 빈 행 최소화 권장
 - (선택) **DB 스냅샷** — 6장에서 만든 `products_snapshot.md`를 올려 제품 설명 질의 보강
 
 > 참고: 콘솔의 **문서 가져오기**는 웹 콘텐츠 가져오기와 로컬 파일 가져오기를 모두 지원합니다. 대화 창(챗)에서는 파일 업로드 후 곧바로 Q&A 대화를 시작할 수 있습니다.
+![import files](./assets/images/001_import_files.png)
 
 ### 3-2-a. 색인 옵션(콘솔 **Advanced Settings**) — 운영 가이드 반영 빠른 세팅
-- **Retrieval Strategy**: `Hybrid Search`(키워드+벡터) 권장. 필요 시 `Semantic retrieval` 단독도 가능.
+![import files](./assets/images/002_import_files_adv.png)
+- **Retrieval Strategy**: `Mixed Search`(키워드+벡터) 권장. 필요 시 `Semantic retrieval` 단독도 가능.
 - **Excel Retrieval Enhancement**: (엑셀/표 질의 강화) **On** 권장 — SKU/코드/숫자 질의 정밀도 개선.
+![import files](./assets/images/003_import_files_table_split.png)
 - **Top‑N(검색 결과 개수)**: *문서* top‑N 기본 5(최대 10), *Q&A* top‑N 기본 3(최대 5) — 우선 기본값으로 시작.
 - **Matching Accuracy(매칭 임계치)**: 기본값에서 시작 → 인용 누락/잡음 시 점진 조정.
 - **Splitting Documents(문서 분할)**:
   - `max slice length` / `slice overlap length` 지정 가능.
   - Parent/Child 두 레벨로 **길이/겹침**을 각각 줄 수 있음.
   - 표(XLSX/CSV)는 **행 단위 분할 규칙** 별도 지원.
+  ![import files](./assets/images/004_import_files_doc_split.png)
 - **사후 조정**: 업로드 후 **More → Re‑split / Re‑index**로 규칙 재적용 가능.
+  ![kb settings](./assets/images/005_kb_settings.png)
 
 ### 3-2-b. 어디서 무엇을 고르나 (콘솔 메뉴 경로 → 옵션)
-> 아래 경로만 따라가면, 위의 **권장 시작값**(Hybrid/Top‑N/Matching/Chunk/Overlap/Excel 강화/사후 조정)을 그대로 재현할 수 있습니다.
+> 아래 경로만 따라가면, 위의 **권장 시작값**(Mixed/Top‑N/Matching/Chunk/Overlap/Excel 강화/사후 조정)을 그대로 재현할 수 있습니다.
 - **Retrieval/Top‑N/Matching/Q&A Top‑N/인용 표시**  
   경로: **Application Management → (앱 선택) → Application Configuration → Dialogue Test → Retrieval policy settings**  
   설정: 
-  - *Text retrieval mode* = **Hybrid**(또는 *Semantic*)
+  - *Text retrieval mode* = **Mixed**(또는 *Semantic*)
   - *Number of documents recalled* = **5**(기본), 최대 10
   - *Matching accuracy* = **기본값**(인용 누락/잡음 시 미세 조정)
   - *Number of questions recalled under new Q&A* = **3**(기본), 최대 5
@@ -93,22 +91,24 @@ ADP Console → **Application Management**에서 새 앱을 만들거나 기존 
 - **사후 조정(Re‑split / 편집)**  
   경로: **Knowledge Base → (문서 행 오른쪽) More → Parsing and Splitting Intervention**  
   동작: 슬라이스를 **편집/추가/삭제** 가능, 저장 시 기존 분할을 **덮어씀(Re‑segmentation)**
+    ![post split settings](./assets/images/006_post_split_slice_setting.png)
+    ![post split settings](./assets/images/007_post_split_slice_setting.png)
 - **릴리즈/사용 상태 관리**  
   경로: **Knowledge Base → (문서) 상세/액션**  
   메모: *Whether to enable*(검색 대상 여부), *Releasing/Released* 상태 관리. **Default KB**는 Enable/Disable 변경 시 재릴리즈 필요
 **빠른 적용 레시피(권장값 그대로)**
-1) *Dialogue Test → Retrieval policy settings*: Hybrid / 문서 Top‑N=5 / Q&A Top‑N=3 / Matching=기본 / 인용=On  
+1) *Dialogue Test → Retrieval policy settings*: Mixed / 문서 Top‑N=5 / Q&A Top‑N=3 / Matching=기본 / 인용=On  
 2) *Application Configuration*: **Table Retrieval Enhancement = On**  
 3) *Knowledge Base → Splitting rules*: 일반문서 **Chunk=800–1200**, **Overlap=100–200** / 표문서는 행 단위 분할 지정  
 4) *Knowledge Base → More*: **Parsing and Splitting Intervention**로 결과 점검·수정 후 저장
 
 > **권장 시작값(초기 러닝용)**  
 > - Chunk: **800–1200**, Overlap: **100–200**  
-> - Retrieval: **Hybrid**, Excel 강화: **On**  
+> - Retrieval: **Mixed**, Excel 강화: **On**  
 > - Document top‑N: **5**, Q&A top‑N: **3**, Matching Accuracy: **기본값**
 
 **권장 색인 옵션(왜 이렇게?)**
-- Retrieval: **Hybrid** — 키워드·벡터를 함께 써서 SKU/정확어+의미 유사성을 동시에 확보합니다. (엑셀 질의가 많다면 **Excel Retrieval Enhancement=On**)
+- Retrieval: **Mixed** — 키워드·벡터를 함께 써서 SKU/정확어+의미 유사성을 동시에 확보합니다. (엑셀 질의가 많다면 **Excel Retrieval Enhancement=On**)
 - Chunk/Overlap: **800–1200 / 100–200** — 문장+표 혼합 문서에서 문맥 손실을 줄이는 안전 구간입니다. (필요 시 **Parent/Child** 분할 값을 따로 지정)
 - **Reference Sources = On** — 운영자가 인용과 근거를 확인·디버깅하기 위한 최소 조건입니다. (인용 누락 시 Top‑N/Accuracy를 먼저 조정)
 
@@ -128,98 +128,44 @@ ADP Console → **Application Management**에서 새 앱을 만들거나 기존 
 
 ---
 
-## 4) API 경로 — 자동화로 신뢰를 ‘굳히기’
-> 콘솔에서 지식 연결이 끝났다면, 이제 **같은 앱**을 코드로 호출해봅니다. 목표는 **검증 가능한(JSON) 응답**을 만드는 것입니다.
+## 4) Python 실습 — 자동화로 신뢰를 ‘굳히기’
+> 콘솔에서 지식 연결이 끝났다면, 이제 **같은 앱**을 Python 스크립트로 호출해 **검증 가능한(JSON) 응답**을 만듭니다. 모든 예제는 requests 기반 경량 코드로 제공되며, 엔드포인트 세부는 스크립트 내부에 캡슐화되어 있습니다.
 
-### 4-1. cURL: KB 전용 JSON 응답 강제
-```bash
-curl -s -X POST "$ADP_BASE_URL/chat/completions" \
-  -H "Authorization: Bearer $ADP_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "'"${ADP_MODEL:-deepseek-r1}"'",
-    "messages": [
-      {"role":"system","content":"Answer ONLY using the app Knowledge Base. Respond in JSON: {\\"found\\":bool, \\"answer\\\":string, \\"citations\\\":[{\\"file\\\":string, \\"loc\\\":string}]}"}, 
-      {"role":"user","content":"반품 가능 기간과 환불 소요 일정을 알려줘"}
-    ]
-  }' | jq -r
-```
-**왜 JSON을 강제하나요?** 파이프라인에서 **자동 테스트**가 쉬워집니다. `found=false`면 즉시 fallback(예: 사람 연결, 다른 검색)로 분기할 수 있죠.
-
-### 4-2. Python 예제는 **별도 파일**로 제공
+### 4-1. 대화(챗) 호출 — JSON 포맷 강제 응답
 - 비스트리밍: `samples/python/kb_api_non_stream.py`
 - 스트리밍: `samples/python/kb_api_stream.py`
 
-> 로컬 실행 방법
-> ```bash
-> # 공통: .env 로드 (macOS/Linux)
-> export $(grep -v '^#' .env | xargs)
->
-> # 1) 비스트리밍
-> python3 samples/python/kb_api_non_stream.py
->
-> # 2) 스트리밍(SSE)
-> python3 samples/python/kb_api_stream.py
-> ```
-
-**다운로드(샘플 모음 ZIP)**: [kb-python-samples.zip](sandbox:/mnt/data/kb_workshop_python_samples/kb-python-samples.zip)
-
-### 4-3. (중요) Knowledge Embedding은 **OpenAI-compatible이 아닙니다** → ADP 고유 API 사용
-> 채팅 API(`chat/completions`)와 달리, **지식 업로드/임베딩/색인 재빌드**는 테넌트마다 제공되는 **ADP 네이티브 엔드포인트**를 사용합니다. 경로/필드명이 다를 수 있으므로 콘솔의 *API Call Information*에서 복사해 사용하세요.
-
-**용어 정리(운영 매뉴얼 용어에 맞춤)**
-- *지식 데이터베이스 관리*: 지식베이스의 **문서, Q&A, 워크플로우, 지식 레이블** 등을 관리하는 기능을 의미합니다.
-- *문서 지식*: PDF, DOCX, TXT 등 **문서/웹 페이지** 형태의 지식.
-- *Q&A 지식*: **문제–응답 쌍** 형태의 지식.
-
-**환경 변수 추가(.env)**
-```ini
-# 콘솔에서 복사하여 채우기 (예시는 형식만 보여줍니다)
-ADP_API_KEY=YOUR_ADP_API_KEY
-ADP_KB_UPLOAD_URL=https://<tenant>/v1/apps/<app_id>/knowledge/documents:upload
-ADP_KB_QNA_UPSERT_URL=https://<tenant>/v1/apps/<app_id>/knowledge/qna:batchUpsert
-ADP_KB_REINDEX_URL=https://<tenant>/v1/apps/<app_id>/knowledge/index:rebuild
-ADP_KB_JOB_URL=https://<tenant>/v1/jobs/{job_id}
-```
-
-**cURL 템플릿**
+실행 방법
 ```bash
-# 1) 문서 업로드 (multipart) — 파일과 태그를 전송
-curl -X POST "$ADP_KB_UPLOAD_URL" \
-  -H "Authorization: Bearer $ADP_API_KEY" \
-  -F "file=@samples/materials/Ecommerce_Returns_Policy_and_FAQ.pdf" \
-  -F "title=Returns Policy" \
-  -F "tags=policy,catalog"
+# 공통: .env 로드 (macOS/Linux)
+export $(grep -v '^#' .env | xargs)
 
-# 2) Q&A 배치 업서트 — CSV→JSON으로 변환해 POST (엔드포인트 스펙에 맞춰 키 이름 조정)
-cat samples/materials/Knowledge_QnA.csv | python - <<'PY'
-import sys,csv,json
-r=csv.DictReader(sys.stdin)
-items=[{"question":x["question"],"answer":x["answer"],"tags":["policy"]} for x in r if x.get("question") and x.get("answer")]
-print(json.dumps({"items":items}))
-PY
-# ↑ 출력(JSON)을 변수로 받아 전송 (macOS 예)
-QJSON=$(cat samples/materials/Knowledge_QnA.csv | python - <<'PY'
-import sys,csv,json;r=csv.DictReader(sys.stdin);print(json.dumps({"items":[{"question":x["question"],"answer":x["answer"],"tags":["policy"]} for x in r if x.get("question") and x.get("answer")]},ensure_ascii=False))
-PY
-)
-curl -s -X POST "$ADP_KB_QNA_UPSERT_URL" \
-  -H "Authorization: Bearer $ADP_API_KEY" -H "Content-Type: application/json" \
-  -d "$QJSON"
+# 1) 비스트리밍
+python3 samples/python/kb_api_non_stream.py
 
-# 3) 색인 재빌드 트리거 후 Job 상태 폴링
-JOB_ID=$(curl -s -X POST "$ADP_KB_REINDEX_URL" -H "Authorization: Bearer $ADP_API_KEY" -H "Content-Type: application/json" -d '{}' | python -c 'import sys,json;print(json.load(sys.stdin).get("job_id") or "")')
-[ -z "$JOB_ID" ] || curl -s "${ADP_KB_JOB_URL//{job_id}/$JOB_ID}" -H "Authorization: Bearer $ADP_API_KEY"
+# 2) 스트리밍(SSE)
+python3 samples/python/kb_api_stream.py
 ```
 
-**파이썬 샘플(권장)** — 레포에 포함할 수 있도록 별도 제공
-- 업로드: `samples/python/adp_kb_upload_file.py`
-- Q&A: `samples/python/adp_kb_import_qna.py`
-- 리인덱스: `samples/python/adp_kb_reindex.py`
+**왜 JSON을 강제하나요?** 파이프라인에서 **자동 테스트**가 쉬워집니다. `found=false`면 즉시 fallback(사람 연결, 보조 검색 등)으로 분기할 수 있습니다.
 
-ZIP 다운로드: [adp-kb-api-samples.zip](sandbox:/mnt/data/adp_kb_api_samples/adp-kb-api-samples.zip)
+### 4-2. 지식 업로드/색인 — Python 헬퍼 스크립트 사용
+- 문서 업로드: `samples/python/adp_kb_upload_file.py`
+- Q&A 업서트: `samples/python/adp_kb_import_qna.py`
+- 색인 재빌드: `samples/python/adp_kb_reindex.py`
 
-> 팁: 엔드포인트가 조금씩 다를 수 있으니, 스크립트의 키 이름(`title`,`tags`,`items`)이 문서 스펙과 다른 경우 해당 부분만 수정해서 사용하세요.
+실행 방법(예)
+```bash
+export $(grep -v '^#' .env | xargs)
+python3 samples/python/adp_kb_upload_file.py \
+  --file samples/materials/Ecommerce_Returns_Policy_and_FAQ.pdf \
+  --title "Returns Policy" --tags policy,catalog
+
+python3 samples/python/adp_kb_import_qna.py --csv samples/materials/Knowledge_QnA.csv --tag policy
+python3 samples/python/adp_kb_reindex.py
+```
+
+> 참고: 테넌트 별 파라미터 차이는 스크립트 내부에서 처리됩니다. 필요 시 스크립트 상단의 상수/환경변수만 조정하세요.
 
 ---
 
@@ -271,7 +217,6 @@ python3 samples/python/db_to_embeddings.py
 ```json
 {"role":"system","content":"Answer ONLY from KB. Return JSON: {found:boolean, answer:string, citations:[{file:string,loc:string}], grounding_confidence:0..1}"}
 ```
-> ※ 테넌트가 API로 색인/검색 파라미터 노출을 지원하는 경우, `adp_options.knowledge`(예: `retrieval: hybrid`, `doc_top_n`, `qa_top_n`, `matching_accuracy`, `chunk_len`, `overlap_len`)처럼 **엔드포인트 스펙의 필드명**에 맞춰 전송할 수 있습니다. 필드명은 테넌트마다 상이하므로 **Console의 API Call Information**을 우선합니다.
 
 **운영 파라미터**
 - `temperature/top_p/max_tokens`로 톤/길이를 제어
@@ -293,7 +238,7 @@ python3 samples/python/db_to_embeddings.py
 **최종 체크리스트**
 - [ ] 업로드 **형식/크기 제한**(문서: 15MB/≤1,000p, 이미지: 2,000px/단일 업로드)을 준수했는가?
 - [ ] PDF/CSV/XLSX 업로드 후 **Reference Sources**가 안정적으로 표시되는가?
-- [ ] API 호출에서 **KB 전용 JSON 응답**(found/answer/citations)을 받는가?
+- [ ] Python 스크립트 실행에서 **KB 전용 JSON 응답**(found/answer/citations)을 받는가?
 - [ ] Q&A 추가 후 동일 질문의 **일관도/명확성**이 개선되는가?
 - [ ] 태그/스코프(가능 시) 또는 프롬프트로 문서 **검색 범위**를 통제했는가?
 
