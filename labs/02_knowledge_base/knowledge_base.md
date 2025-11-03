@@ -44,7 +44,7 @@
 ### 3-1. 앱 선택/생성
 ADP Console → **Application Management**에서 새 앱을 만들거나 기존 앱을 선택하세요. 이름은 *“kb-lab”* 정도로 간단히.
 
-### 3-2. Knowledge Management: 파일을 올릴 때의 생각의 흐름
+### 3-2. Knowledge Management: 파일을 올릴 때의 흐름
 콘솔의 **Knowledge** 화면에서 다음 작업을 지원합니다: **문서 가져오기(웹/로컬)**, **문서 다운로드**, **문서 삭제**. 업로드한 문서는 파싱/청킹/색인 과정을 거쳐 질의 시 검색–재랭크–생성 단계에서 참조됩니다. 
 
 - **PDF** [Construction_Guide_ Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf](./../../samples/materials/Construction_Guide_%20Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf) — 정책/표/일러스트가 섞인 문서형 지식 검증용
@@ -53,22 +53,18 @@ ADP Console → **Application Management**에서 새 앱을 만들거나 기존 
 - (선택) **DB 스냅샷** — 6장에서 만든 `products_snapshot.md`를 올려 제품 설명 질의 보강
 
 > 참고: 콘솔의 **문서 가져오기**는 웹 콘텐츠 가져오기와 로컬 파일 가져오기를 모두 지원합니다. 대화 창(챗)에서는 파일 업로드 후 곧바로 Q&A 대화를 시작할 수 있습니다.
-![import files](./assets/images/001_import_files.png)
+
 
 ### 3-2-a. 색인 옵션(콘솔 **Advanced Settings**) — 운영 가이드 반영 빠른 세팅
-![import files](./assets/images/002_import_files_adv.png)
 - **Retrieval Strategy**: `Mixed Search`(키워드+벡터) 권장. 필요 시 `Semantic retrieval` 단독도 가능.
 - **Excel Retrieval Enhancement**: (엑셀/표 질의 강화) **On** 권장 — SKU/코드/숫자 질의 정밀도 개선.
-![import files](./assets/images/003_import_files_table_split.png)
 - **Top‑N(검색 결과 개수)**: *문서* top‑N 기본 5(최대 10), *Q&A* top‑N 기본 3(최대 5) — 우선 기본값으로 시작.
 - **Matching Accuracy(매칭 임계치)**: 기본값에서 시작 → 인용 누락/잡음 시 점진 조정.
 - **Splitting Documents(문서 분할)**:
   - `max slice length` / `slice overlap length` 지정 가능.
   - Parent/Child 두 레벨로 **길이/겹침**을 각각 줄 수 있음.
   - 표(XLSX/CSV)는 **행 단위 분할 규칙** 별도 지원.
-  ![import files](./assets/images/004_import_files_doc_split.png)
 - **사후 조정**: 업로드 후 **More → Re‑split / Re‑index**로 규칙 재적용 가능.
-  ![kb settings](./assets/images/005_kb_settings.png)
 
 ### 3-2-b. 어디서 무엇을 고르나 (콘솔 메뉴 경로 → 옵션)
 > 아래 경로만 따라가면, 위의 **권장 시작값**(Mixed/Top‑N/Matching/Chunk/Overlap/Excel 강화/사후 조정)을 그대로 재현할 수 있습니다.
@@ -91,8 +87,6 @@ ADP Console → **Application Management**에서 새 앱을 만들거나 기존 
 - **사후 조정(Re‑split / 편집)**  
   경로: **Knowledge Base → (문서 행 오른쪽) More → Parsing and Splitting Intervention**  
   동작: 슬라이스를 **편집/추가/삭제** 가능, 저장 시 기존 분할을 **덮어씀(Re‑segmentation)**
-    ![post split settings](./assets/images/006_post_split_slice_setting.png)
-    ![post split settings](./assets/images/007_post_split_slice_setting.png)
 - **릴리즈/사용 상태 관리**  
   경로: **Knowledge Base → (문서) 상세/액션**  
   메모: *Whether to enable*(검색 대상 여부), *Releasing/Released* 상태 관리. **Default KB**는 Enable/Disable 변경 시 재릴리즈 필요
