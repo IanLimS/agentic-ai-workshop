@@ -45,56 +45,48 @@
 ADP Console → **Application Management**에서 새 앱을 만들거나 기존 앱을 선택하세요. 이름은 *“kb-lab”* 정도로 간단히.
 
 ### 3-2. Knowledge Management: 파일을 올릴 때의 흐름
-콘솔의 **Knowledge** 화면에서 다음 작업을 지원합니다: **문서 가져오기(웹/로컬)**, **문서 다운로드**, **문서 삭제**. 업로드한 문서는 파싱/청킹/색인 과정을 거쳐 질의 시 검색–재랭크–생성 단계에서 참조됩니다. 
+a. 생성한 앱에서 상단의 **Knowledge** 탭을 들어갑니다.
+b. **Import** 버튼을 클릭해서 문서를 업로드 합니다.
+- **Cite sources** 를 enable해서 Agent 가 응답할때 임베딩한 문서의 출처를 가져올 수 있도록 합니다.
+> 콘솔의 **Knowledge** 화면에서 다음 작업을 지원합니다: **문서 가져오기(웹/로컬)**, **문서 다운로드**, **문서 삭제**. 업로드한 문서는 파싱/청킹/색인 과정을 거쳐 질의 시 검색–재랭크–생성 단계에서 참조됩니다. 
+c. Document splitting 전략에 따라 document split 을 구성합니다.
+d. ADP 에서 문서를 파싱하고 추가할 준비를 합니다. 준비가 완료되면 오른쪽 상단의 **Release** 버튼을 눌러 문서의 임베딩을 배포 합니다.
 
-- **PDF** [Construction_Guide_ Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf](./../../samples/materials/Construction_Guide_%20Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf) — 정책/표/일러스트가 섞인 문서형 지식 검증용
-- **CSV** [Product_Catalog_Snippet.csv](./../../samples/materials/Product_Catalog_Snippet.csv) — SKU/가격 등 표 기반 정답 검증용 (시트/헤더 정합성 중요)
-- **XLSX** [Store_Locations.xlsx](./../../samples/materials/Store_Locations.xlsx) — 시트/열 이름을 명확히, 빈 행 최소화 권장
-- (선택) **DB 스냅샷** — 6장에서 만든 `products_snapshot.md`를 올려 제품 설명 질의 보강
-
-> 참고: 콘솔의 **문서 가져오기**는 웹 콘텐츠 가져오기와 로컬 파일 가져오기를 모두 지원합니다. 대화 창(챗)에서는 파일 업로드 후 곧바로 Q&A 대화를 시작할 수 있습니다.
-
-
-### 3-2-a. 색인 옵션(콘솔 **Advanced Settings**) — 운영 가이드 반영 빠른 세팅
-- **Retrieval Strategy**: `Mixed Search`(키워드+벡터) 권장. 필요 시 `Semantic retrieval` 단독도 가능.
-- **Excel Retrieval Enhancement**: (엑셀/표 질의 강화) **On** 권장 — SKU/코드/숫자 질의 정밀도 개선.
-- **Top‑N(검색 결과 개수)**: *문서* top‑N 기본 5(최대 10), *Q&A* top‑N 기본 3(최대 5) — 우선 기본값으로 시작.
-- **Matching Accuracy(매칭 임계치)**: 기본값에서 시작 → 인용 누락/잡음 시 점진 조정.
-- **Splitting Documents(문서 분할)**:
-  - `max slice length` / `slice overlap length` 지정 가능.
-  - Parent/Child 두 레벨로 **길이/겹침**을 각각 줄 수 있음.
-  - 표(XLSX/CSV)는 **행 단위 분할 규칙** 별도 지원.
-- **사후 조정**: 업로드 후 **More → Re‑split / Re‑index**로 규칙 재적용 가능.
-
-### 3-2-b. 어디서 무엇을 고르나 (콘솔 메뉴 경로 → 옵션)
-> 아래 경로만 따라가면, 위의 **권장 시작값**(Mixed/Top‑N/Matching/Chunk/Overlap/Excel 강화/사후 조정)을 그대로 재현할 수 있습니다.
-- **Retrieval/Top‑N/Matching/Q&A Top‑N/인용 표시**  
-  경로: **Application Management → (앱 선택) → Application Configuration → Dialogue Test → Retrieval policy settings**  
-  설정: 
-  - *Text retrieval mode* = **Mixed**(또는 *Semantic*)
-  - *Number of documents recalled* = **5**(기본), 최대 10
-  - *Matching accuracy* = **기본값**(인용 누락/잡음 시 미세 조정)
-  - *Number of questions recalled under new Q&A* = **3**(기본), 최대 5
-  - *Source references extraction* = **On**(인용/출처 표시)
-  - **Excel Retrieval Enhancement(표 질의 강화)**  
-  경로: **Application Configuration → (해당 에이전트/앱 설정)**  
-  설정: **Table Retrieval Enhancement = Enable(On)**
-- **Splitting Documents(문서 분할 규칙)**  
+> **Splitting Documents(문서 분할 규칙)**  
   경로 A — **업로드 직후**: **Knowledge Base → 파일 Import 완료 화면**에서 분할 규칙 설정(*Split after uploading documents*)  
   경로 B — **표(XLSX/CSV)**: **Knowledge Base → (표 문서 선택) → Split by Row**에서 *Header range*, *Start row*, *Rows per slice* 지정  
   경로 C — **일반 문서(PDF/DOCX/TXT)**: **Knowledge Base → (문서 선택) → Splitting rules**에서 
   *maximum slice length* / *slice overlap length* 지정, 필요 시 **Parent/Child** 규칙 사용
-- **사후 조정(Re‑split / 편집)**  
-  경로: **Knowledge Base → (문서 행 오른쪽) More → Parsing and Splitting Intervention**  
-  동작: 슬라이스를 **편집/추가/삭제** 가능, 저장 시 기존 분할을 **덮어씀(Re‑segmentation)**
-- **릴리즈/사용 상태 관리**  
-  경로: **Knowledge Base → (문서) 상세/액션**  
-  메모: *Whether to enable*(검색 대상 여부), *Releasing/Released* 상태 관리. **Default KB**는 Enable/Disable 변경 시 재릴리즈 필요
+- **Splitting Documents(문서 분할)**:
+  - `max slice length` / `slice overlap length` 지정 가능.
+  - Parent/Child 두 레벨로 **길이/겹침**을 각각 줄 수 있음.
+  - 표(XLSX/CSV)는 **행 단위 분할 규칙** 별도 지원.
+
+- **PDF** [Construction_Guide_ Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf](./assets/samples/Construction_Guide_%20Data+AI_Enabled_Next_Gen_Data_Intelligence_Platform.pdf) — 정책/표/일러스트가 섞인 문서형 지식 검증용
+- **CSV** [Product_Catalog_Snippet.csv](./assets/samples/Product_Catalog_Snippet.csv) — SKU/가격 등 표 기반 정답 검증용 (시트/헤더 정합성 중요)
+- **XLSX** [Store_Locations.xlsx](./assets/samples/Store_Locations.xlsx) — 시트/열 이름을 명확히, 빈 행 최소화 권장
+- (선택) **DB 스냅샷** — 6장에서 만든 `products_snapshot.md`를 올려 제품 설명 질의 보강
+
+> 참고: 콘솔의 **문서 가져오기**는 웹 콘텐츠 가져오기와 로컬 파일 가져오기를 모두 지원합니다. 대화 창(챗)에서는 파일 업로드 후 곧바로 Q&A 대화를 시작할 수 있습니다.
+
+### 3-3. 인덱싱 옵션(콘솔 **Advanced Settings**) — 운영 가이드 반영 빠른 세팅
+**App Settings** -> **Knowledge** 메뉴를 통해서 다양한 인덱싱 옵션들을 선택할 수 있습니다.
+- **Retrieval Strategy**: `Mixed Search`(키워드+벡터) 권장. 필요 시 `Semantic retrieval` 도 가능.
+- **Excel Retrieval Enhancement**: (엑셀/표 질의 강화) **On** 권장 — SKU/코드/숫자 질의 정밀도 개선.
+- **Top‑N(Recalled files)**: *문서* top‑N 기본 5(최대 10), *Q&A* top‑N 기본 3(최대 5) — 우선 기본값으로 시작.
+- **Matching Accuracy(File retrieval accuracy)**: 기본값에서 시작 → 인용 누락/노이즈 결과 따라 미세 조정.
+
+### 3-4. 문서 분할 전략 사후 미세 조정
+문서를 추가하고 임베딩 한 이후에도 각 문서마다 별도의 분할 전략을 적용 가능 합니다. 
+a. **상단 Knowledge 탭을 클릭 → (변경할 문서 행 오른쪽) More → Parsing and Splitting Intervention**  을 클릭 합니다.
+  현재 임베딩된 문서가 어떻게 slice 되었는지 확인 할 수 있습니다.
+  슬라이스를 **편집/추가/삭제** 가능 합니다.
+  저장 시 기존 분할을 **덮어씁니다(Re‑segmentation)**
+
 **빠른 적용 레시피(권장값 그대로)**
-1) *Dialogue Test → Retrieval policy settings*: Mixed / 문서 Top‑N=5 / Q&A Top‑N=3 / Matching=기본 / 인용=On  
-2) *Application Configuration*: **Table Retrieval Enhancement = On**  
-3) *Knowledge Base → Splitting rules*: 일반문서 **Chunk=800–1200**, **Overlap=100–200** / 표문서는 행 단위 분할 지정  
-4) *Knowledge Base → More*: **Parsing and Splitting Intervention**로 결과 점검·수정 후 저장
+1) *Knowledge configuration → Retrieval policy settings*: 
+  Mixed / Excel Retrieval Enhancement = On / 문서 Top‑N=5 / Q&A Top‑N=3 / Matching=기본 / 인용=On  
+2) *Knowledge Base → More*: **Parsing and Splitting Intervention -> Document Splitting Settings** 에서 결과 점검·수정 후 저장 : **Universal identifier, Chunk=800–1200**, **Overlap=100–200**
 
 > **권장 시작값(초기 러닝용)**  
 > - Chunk: **800–1200**, Overlap: **100–200**  
@@ -106,7 +98,7 @@ ADP Console → **Application Management**에서 새 앱을 만들거나 기존 
 - Chunk/Overlap: **800–1200 / 100–200** — 문장+표 혼합 문서에서 문맥 손실을 줄이는 안전 구간입니다. (필요 시 **Parent/Child** 분할 값을 따로 지정)
 - **Reference Sources = On** — 운영자가 인용과 근거를 확인·디버깅하기 위한 최소 조건입니다. (인용 누락 시 Top‑N/Accuracy를 먼저 조정)
 
-### 3-3. Debug(대화 테스트): 인용을 읽는 법
+### 3-4. Debug(대화 테스트): 인용을 읽는 법
 아래 질문을 던져 **답변 하단의 인용**이 자연스럽게 붙는지 보세요.
 - 정책(PDF): *“반품 가능 기간과 환불 소요 일정을 알려줘.”*
 - 카탈로그(CSV): *“SKU-1003 Headphones의 가격은 얼마야?”*
